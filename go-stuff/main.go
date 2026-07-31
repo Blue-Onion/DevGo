@@ -1,30 +1,42 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"slices"
+	"log/slog"
+	"math/rand"
+	"time"
 )
 
 func main() {
-	arr := [][]int{
-		{7, 2, 9, 1, 5},
-		{12, 4, 8, 15, 3},
-		{20, 11, 18, 14, 16},
-		{6, 25, 21, 24, 22},
-		{19, 13, 17, 10, 23},
-	}
-	sort2DArr(arr)
-	fmt.Println(arr)
-}
-func sort2DArr(arr [][]int) {
-	res := make(chan []int)
-	for _, v := range arr {
-		go func(ar []int) {
-			slices.Sort(ar)
-			res <- ar
-		}(v)
-	}
-	for range arr {
-		fmt.Println(<-res)
+	done := make(chan int)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	go func() {
+		if rand.Int() > 3 {
+			slog.Info("Bad Luck")
+
+			select {
+			case <-time.After(100 * time.Second):
+				fmt.Println("Finished work")
+			case <-ctx.Done():
+				fmt.Println("Cancelled!")
+				return
+			}
+			return
+		}
+
+		select {
+		case done <- 1:
+		case <-ctx.Done():
+			return
+		}
+	}()
+
+	select {
+	case <-done:
+		fmt.Println("Success")
+	case <-ctx.Done():
+		fmt.Println("Timeout")
 	}
 }
